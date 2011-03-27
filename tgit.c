@@ -85,7 +85,35 @@ int main (int argc, char** argv)
     git_commit_parent(&parent, commit, p);
     git_oid_fmt(out, git_commit_id(parent));
     printf("Parent: %s\n", out);
+    git_commit_close(parent);
   }
+
+  git_commit_close(commit);
+
+  /* ---------------------------- */
+
+  printf("\n*Commit Writing*\n");
+  git_oid tree_id, parent_id, commit_id;
+
+  /* create signatures */
+  author = git_signature_new("Scott Chacon", "schacon@gmail.com", 123456789, 60);
+  cmtter = git_signature_new("Scott A Chacon", "scott@github.com", 987654321, 90);
+
+  git_oid_mkstr(&tree_id, "28873d96b4e8f4e33ea30f4c682fd325f7ba56ac");
+  git_oid_mkstr(&parent_id, "f0877d0b841d75172ec404fc9370173dfffc20d1");
+
+  git_commit_create_v(
+    &commit_id, /* out id */
+    repo,
+    NULL, /* do not update the HEAD */
+    author,
+    cmtter,
+    "example commit",
+    &tree_id,
+    1, &parent_id);
+
+  git_oid_fmt(out, &commit_id);
+  printf("New Commit: %s\n", out);
 
   /* ---------------------------- */
 
