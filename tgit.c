@@ -18,7 +18,8 @@ int main (int argc, char** argv)
   /* ---------------------------- */
 
   printf("\n*Raw to Hex*\n");
-  char out[40];
+  char out[41];
+  out[41] = 0;
   git_oid_fmt(out, &oid);
   printf("SHA hex string: %s\n", out);
 
@@ -44,6 +45,47 @@ int main (int argc, char** argv)
   printf("object length and type: %d, %s\n", (int)git_odb_object_size(obj), str_type);
 
   git_odb_object_close(obj); // close the object when you are done with it
+
+  /* ---------------------------- */
+
+  printf("\n*Raw Object Write*\n");
+
+  git_oid oid2;
+  git_odb_write(&oid2, odb, "test data", 9, GIT_OBJ_BLOB);
+  git_oid_fmt(out, &oid2);
+  printf("Written Object: %s\n", out);
+
+  /* ---------------------------- */
+
+  printf("\n*Commit Parsing*\n");
+
+  git_commit *commit;
+  git_oid oid3;
+
+  git_oid_mkstr(&oid3, "f0877d0b841d75172ec404fc9370173dfffc20d1");
+
+  error = git_commit_lookup(&commit, repo, &oid3);
+
+  const git_signature *author, *cmtter;
+  const char *message, *message_short;
+  time_t ctime;
+  unsigned int parents, p;
+
+  message  = git_commit_message(commit);
+  message_short = git_commit_message_short(commit);
+  author   = git_commit_author(commit);
+  cmtter   = git_commit_committer(commit);
+  ctime    = git_commit_time(commit);
+
+  printf("Author: %s (%s)\n", author->name, author->email);
+
+  parents  = git_commit_parentcount(commit);
+  for (p = 0;p < parents;p++) {
+    git_commit *parent;
+    git_commit_parent(&parent, commit, p);
+    git_oid_fmt(out, git_commit_id(parent));
+    printf("Parent: %s\n", out);
+  }
 
   /* ---------------------------- */
 
