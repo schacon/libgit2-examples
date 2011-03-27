@@ -117,6 +117,22 @@ int main (int argc, char** argv)
 
   /* ---------------------------- */
 
+  printf("\n*Tag Parsing*\n");
+  git_tag *tag;
+  const char *tmessage;
+
+  git_oid_mkstr(&oid, "bc422d45275aca289c51d79830b45cecebff7c3a");
+
+  error = git_tag_lookup(&tag, repo, &oid);
+
+  git_tag_target((git_object **)&commit, tag);
+  git_tag_name(tag);    // "test"
+  git_tag_type(tag);    // GIT_OBJ_TAG
+  tmessage = git_tag_message(tag); // "tag message\n"
+  printf("Tag Message: %s\n", tmessage);
+
+  /* ---------------------------- */
+
   git_repository_free(repo);
 }
 
