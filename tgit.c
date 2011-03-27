@@ -137,7 +137,7 @@ int main (int argc, char** argv)
 
   git_tree *tree;
   git_tree_entry *entry;
-  git_object *objb;
+  git_object *objt;
 
   git_oid_mkstr(&oid, "2a741c18ac5ff082a7caaec6e74db3075a1906b5");
 
@@ -152,7 +152,43 @@ int main (int argc, char** argv)
   entry = git_tree_entry_byindex(tree, 0);
   printf("Entry name: %s\n", git_tree_entry_name(entry)); // "README"
 
-  git_tree_entry_2object(&objb, repo, entry); // blob
+  git_tree_entry_2object(&objt, repo, entry); // blob
+
+  /* ---------------------------- */
+
+  printf("\n*Blob Parsing*\n");
+
+  git_blob *blob;
+
+  git_oid_mkstr(&oid, "af7574ea73f7b166f869ef1a39be126d9a186ae0");
+
+  git_blob_lookup(&blob, repo, &oid);
+  printf("Blob Size: %d\n", git_blob_rawsize(blob)); // 8
+  git_blob_rawcontent(blob); // "content"
+
+  /* ---------------------------- */
+
+  printf("\n*Revwalk Parsing*\n");
+  git_revwalk *walk;
+  git_commit *wcommit;
+
+  git_oid_mkstr(&oid, "f0877d0b841d75172ec404fc9370173dfffc20d1");
+
+  git_revwalk_new(&walk, repo);
+  git_revwalk_sorting(walk, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE);
+  git_revwalk_push(walk, &oid);
+
+  const git_signature *cauth;
+  const char *cmsg;
+
+  while ((git_revwalk_next(&oid, walk)) == GIT_SUCCESS) {
+    error = git_commit_lookup(&wcommit, repo, &oid);
+    cmsg  = git_commit_message_short(wcommit);
+    cauth = git_commit_author(wcommit);
+    printf("%s (%s)\n", cmsg, cauth->email);
+  }
+
+  git_revwalk_free(walk);
 
   /* ---------------------------- */
 
