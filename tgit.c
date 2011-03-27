@@ -133,6 +133,29 @@ int main (int argc, char** argv)
 
   /* ---------------------------- */
 
+  printf("\n*Tree Parsing*\n");
+
+  git_tree *tree;
+  git_tree_entry *entry;
+  git_object *objb;
+
+  git_oid_mkstr(&oid, "2a741c18ac5ff082a7caaec6e74db3075a1906b5");
+
+  git_tree_lookup(&tree, repo, &oid);
+
+  int cnt = git_tree_entrycount(tree); // 3
+  printf("tree entries: %d\n", cnt);
+
+  entry = git_tree_entry_byname(tree, "hello.c");
+  git_tree_entry_name(entry); // "README"
+
+  entry = git_tree_entry_byindex(tree, 0);
+  printf("Entry name: %s\n", git_tree_entry_name(entry)); // "README"
+
+  git_tree_entry_2object(&objb, repo, entry); // blob
+
+  /* ---------------------------- */
+
   git_repository_free(repo);
 }
 
