@@ -327,6 +327,12 @@ int main (int argc, char** argv)
   // Like the other objects, be sure to free the revwalker when you're done to prevent memory leaks.
   git_revwalk_free(walk);
 
+  // ### Index File Manipulation
+  // [gi]: http://libgit2.github.com/libgit2/group__git__index.html
+  //
+  // ### References
+  // [ref]: http://libgit2.github.com/libgit2/refs_8h.html
+
   // Finally, when you're done with the repository, you can free it as well.
   git_repository_free(repo);
 }
