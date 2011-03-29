@@ -59,7 +59,7 @@ int main (int argc, char** argv)
   // Next we will convert the 20 byte raw SHA1 value to a human readable 40 char hex value.
   printf("\n*Raw to Hex*\n");
   char out[41];
-  out[41] = 0;
+  out[40] = '\0';
 
   // If you have a oid, you can easily get the hex value of the SHA as well.
   git_oid_fmt(out, &oid);
@@ -356,14 +356,39 @@ int main (int argc, char** argv)
     git_index_entry *e = git_index_get(index, i);
 
     printf("path: %s\n", e->path);
-    printf("mtime: %d\n", e->mtime.seconds);
-    printf("fs: %d\n", e->file_size);
+    printf("mtime: %d\n", (int)e->mtime.seconds);
+    printf("fs: %d\n", (int)e->file_size);
   }
 
   git_index_free(index);
 
   // ### References
+  //
+  // The [reference API][ref] allows you to list, resolve, create and update references such as
+  // branches, tags and remote references (everything in the .git/refs directory).
+  //
   // [ref]: http://libgit2.github.com/libgit2/refs_8h.html
+
+  printf("\n*Reference Listing*\n");
+
+  // Here we will implement something like `git for-each-ref` simply listing out all available
+  // references and the object SHA they resolve to.
+  git_strarray ref_list;
+  git_reference_listall(&ref_list, repo, GIT_REF_LISTALL);
+
+  const char *refname;
+  git_reference *ref;
+
+  // Now that we have the list of reference names, we can lookup each ref one at a time and
+  // resolve them to the SHA, then print both values out.
+  for (i = 0; i < ref_list.count; ++i) {
+    refname = ref_list.strings[i];
+    git_reference_lookup(&ref, repo, refname);
+    git_oid_fmt(out, git_reference_oid(ref));
+    printf("%s %s\n", out, refname);
+  }
+
+  git_strarray_free(&ref_list);
 
   // Finally, when you're done with the repository, you can free it as well.
   git_repository_free(repo);
