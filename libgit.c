@@ -329,8 +329,39 @@ int main (int argc, char** argv)
   git_revwalk_free(walk);
 
   // ### Index File Manipulation
-  // [gi]: http://libgit2.github.com/libgit2/group__git__index.html
   //
+  // The [index file API][gi] allows you to read, traverse, update and write the Git index file 
+  // (sometimes thought of as the staging area).
+  //
+  // [gi]: http://libgit2.github.com/libgit2/group__git__index.html
+
+  printf("\n*Index Walking*\n");
+
+  git_index *index;
+  unsigned int i, e, ecount;
+  git_index_entry **entries;
+
+  // You can either open the index from the standard location in an open repository, as we're doing
+  // here, or you can open and manipulate any index file with `git_index_open_bare()`.
+  git_index_open_inrepo(&index, repo);
+
+  // You need to populate the index in memory with the contents of the index file to begin.
+  git_index_read(index);
+
+  // For each entry in the index, you can get a bunch of information including the SHA (oid), path
+  // and mode which map to the tree objects that are written out.  It also has filesystem properties
+  // to help determine what to inspect for changes (ctime, mtime, dev, ino, uid, gid, file_size and flags)
+  ecount = git_index_entrycount(index);
+  for (i = 0; i < ecount; ++i) {
+    git_index_entry *e = git_index_get(index, i);
+
+    printf("path: %s\n", e->path);
+    printf("mtime: %d\n", e->mtime.seconds);
+    printf("fs: %d\n", e->file_size);
+  }
+
+  git_index_free(index);
+
   // ### References
   // [ref]: http://libgit2.github.com/libgit2/refs_8h.html
 
