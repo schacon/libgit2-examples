@@ -5,7 +5,7 @@
 //
 // [This file][ex] is an example of using that API in a real, compilable C file.
 // Before published, this file is compiled and run to make sure it actually
-// runs.  As the API is updated, this fill will be updated to demonstrate the
+// runs.  As the API is updated, this file will be updated to demonstrate the
 // new functionality. This project is [on GitHub][ex].
 //
 // If you're trying to write something in C using [libgit2][lg], you will also want

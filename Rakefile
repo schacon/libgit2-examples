@@ -5,7 +5,8 @@ task :compile do
 end
 
 task :doc do
-  `rocco --language=C --comment-chars="//" -o index.html libgit.c`
+  `rocco --language=C --comment-chars="//" libgit.c`
+  `mv libgit.html index.html`
   exec "open index.html"
 end
 
