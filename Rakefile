@@ -4,6 +4,11 @@ task :compile do
   exec "./libgit"
 end
 
+task :si do
+  `gcc -lgit2 -lz -o showindex showindex.c`
+  exec "./showindex"
+end
+
 task :doc do
   `rocco --language=C --comment-chars="//" libgit.c`
   `mv libgit.html index.html`
