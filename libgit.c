@@ -398,16 +398,16 @@ int main (int argc, char** argv)
     refname = ref_list.strings[i];
     git_reference_lookup(&ref, repo, refname);
 
-	switch (git_reference_type(ref)) {
-	case GIT_REF_OID:
-		git_oid_fmt(out, git_reference_oid(ref));
-		printf("%s [%s]\n", refname, out);
-		break;
+    switch (git_reference_type(ref)) {
+    case GIT_REF_OID:
+      git_oid_fmt(out, git_reference_oid(ref));
+      printf("%s [%s]\n", refname, out);
+      break;
 
-	case GIT_REF_SYMBOLIC:
-		printf("%s => %s\n", refname, git_reference_target(ref));
-		break;
-	}
+    case GIT_REF_SYMBOLIC:
+      printf("%s => %s\n", refname, git_reference_target(ref));
+      break;
+    }
   }
 
   git_strarray_free(&ref_list);
