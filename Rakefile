@@ -1,6 +1,6 @@
 task :compile do
   `rm -f libgit`
-  `gcc -lgit2 -lz -o libgit libgit.c`
+  `gcc -lgit2 -o libgit libgit.c`
   exec "./libgit"
 end
 
