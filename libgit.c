@@ -79,7 +79,7 @@ int main (int argc, char** argv)
   printf("\n*Raw Object Read*\n");
   git_odb_object *obj;
   git_otype otype;
-  unsigned char *data;
+  const unsigned char *data;
   const char *str_type;
   int error;
 
@@ -93,7 +93,7 @@ int main (int argc, char** argv)
   // is human readable plain ASCII text. For a blob it is just file contents, so it could be
   // text or binary data. For a tree it is a special binary format, so it's unlikely to be
   // hugely helpful as a raw object.
-  data = (char*)git_odb_object_data(obj);
+  data = (const unsigned char *)git_odb_object_data(obj);
   otype = git_odb_object_type(obj);
 
   // We provide methods to convert from the object type which is an enum, to a string 
@@ -115,7 +115,7 @@ int main (int argc, char** argv)
   // direct access to the key/value properties of Git.  Here we'll write a new blob object
   // that just contains a simple string.  Notice that we have to specify the object type as
   // the `git_otype` enum.
-  git_odb_write(&oid, odb, "test data", 9, GIT_OBJ_BLOB);
+  git_odb_write(&oid, odb, "test data", sizeof("test data") - 1, GIT_OBJ_BLOB);
 
   // Now that we've written the object, we can check out what SHA1 was generated when the
   // object was written to our database.
@@ -219,7 +219,8 @@ int main (int argc, char** argv)
   // [tm]: http://libgit2.github.com/libgit2/group__git__tag.html
   printf("\n*Tag Parsing*\n");
   git_tag *tag;
-  const char *tmessage;
+  const char *tmessage, *tname;
+  git_otype ttype;
 
   // We create an oid for the tag object if we know the SHA and look it up in the repository the same
   // way that we would a commit (or any other) object.
@@ -231,10 +232,12 @@ int main (int argc, char** argv)
   // (usually a commit object), the type of the target object (usually 'commit'), the name ('v1.0'), 
   // the tagger (a git_signature - name, email, timestamp), and the tag message.
   git_tag_target((git_object **)&commit, tag);
-  git_tag_name(tag);    // "test"
-  git_tag_type(tag);    // GIT_OBJ_TAG (otype enum)
+  tname = git_tag_name(tag);    // "test"
+  ttype = git_tag_type(tag);    // GIT_OBJ_COMMIT (otype enum)
   tmessage = git_tag_message(tag); // "tag message\n"
   printf("Tag Message: %s\n", tmessage);
+
+  git_commit_close(commit);
 
   // #### Tree Parsing
   // [Tree parsing][tp] is a bit different than the other objects, in that we have a subtype which is the
@@ -267,6 +270,9 @@ int main (int argc, char** argv)
   // of submodules) that it points to.  You can also get the mode if you want.
   git_tree_entry_2object(&objt, repo, entry); // blob
 
+  // Remember to close the looked-up object once you are done using it
+  git_object_close(objt);
+
   // #### Blob Parsing
   //
   // The last object type is the simplest and requires the least parsing help. Blobs are just file
@@ -283,6 +289,10 @@ int main (int argc, char** argv)
   git_oid_mkstr(&oid, "af7574ea73f7b166f869ef1a39be126d9a186ae0");
   git_blob_lookup(&blob, repo, &oid);
 
+  // You can access a buffer with the raw contents of the blob directly.
+  // Note that this buffer may not be contain ASCII data for certain blobs (e.g. binary files):
+  // do not consider the buffer a NULL-terminated string, and use the `git_blob_rawsize` attribute to
+  // find out its exact size in bytes
   printf("Blob Size: %d\n", git_blob_rawsize(blob)); // 8
   git_blob_rawcontent(blob); // "content"
 
@@ -317,6 +327,9 @@ int main (int argc, char** argv)
 
   // Now that we have the starting point pushed onto the walker, we can start asking for ancestors. It
   // will return them in the sorting order we asked for as commit oids.
+  // We can then lookup and parse the commited pointed at by the returned OID;
+  // note that this operation is specially fast since the raw contents of the commit object will
+  // be cached in memory
   while ((git_revwalk_next(&oid, walk)) == GIT_SUCCESS) {
     error = git_commit_lookup(&wcommit, repo, &oid);
     cmsg  = git_commit_message_short(wcommit);
@@ -326,6 +339,8 @@ int main (int argc, char** argv)
   }
 
   // Like the other objects, be sure to free the revwalker when you're done to prevent memory leaks.
+  // Also, make sure that the repository being walked it not deallocated while the walk is in
+  // progress, or it will result in undefined behavior
   git_revwalk_free(walk);
 
   // ### Index File Manipulation
@@ -339,18 +354,16 @@ int main (int argc, char** argv)
 
   git_index *index;
   unsigned int i, e, ecount;
-  git_index_entry **entries;
 
   // You can either open the index from the standard location in an open repository, as we're doing
-  // here, or you can open and manipulate any index file with `git_index_open_bare()`.
+  // here, or you can open and manipulate any index file with `git_index_open_bare()`. The index
+  // for the repository will be located and loaded from disk.
   git_index_open_inrepo(&index, repo);
-
-  // You need to populate the index in memory with the contents of the index file to begin.
-  git_index_read(index);
 
   // For each entry in the index, you can get a bunch of information including the SHA (oid), path
   // and mode which map to the tree objects that are written out.  It also has filesystem properties
   // to help determine what to inspect for changes (ctime, mtime, dev, ino, uid, gid, file_size and flags)
+  // All these properties are exported publicly in the `git_index_entry` struct
   ecount = git_index_entrycount(index);
   for (i = 0; i < ecount; ++i) {
     git_index_entry *e = git_index_get(index, i);
@@ -376,7 +389,7 @@ int main (int argc, char** argv)
   git_strarray ref_list;
   git_reference_listall(&ref_list, repo, GIT_REF_LISTALL);
 
-  const char *refname;
+  const char *refname, *reftarget;
   git_reference *ref;
 
   // Now that we have the list of reference names, we can lookup each ref one at a time and
@@ -384,8 +397,17 @@ int main (int argc, char** argv)
   for (i = 0; i < ref_list.count; ++i) {
     refname = ref_list.strings[i];
     git_reference_lookup(&ref, repo, refname);
-    git_oid_fmt(out, git_reference_oid(ref));
-    printf("%s %s\n", out, refname);
+
+	switch (git_reference_type(ref)) {
+	case GIT_REF_OID:
+		git_oid_fmt(out, git_reference_oid(ref));
+		printf("%s [%s]\n", refname, out);
+		break;
+
+	case GIT_REF_SYMBOLIC:
+		printf("%s => %s\n", refname, git_reference_target(ref));
+		break;
+	}
   }
 
   git_strarray_free(&ref_list);
